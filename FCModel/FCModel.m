@@ -836,7 +836,11 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
     __block BOOL update;
     __block NSSet *changedFields = nil;
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
-    
+        if (! checkForOpenDatabaseFatal(NO)) {
+            result = FCModelSaveFailed;
+            return;
+        }
+
         NSDictionary *changes = self.unsavedChanges;
         BOOL dirty = changes.count;
         if (! dirty && existsInDatabase) { result = FCModelSaveNoChanges; return; }
