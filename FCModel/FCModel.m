@@ -330,7 +330,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (NSError *)executeUpdateQuery:(NSString *)query, ...
 {
-    checkForOpenDatabaseFatal(YES);
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
 
     va_list args;
     va_list *foolTheStaticAnalyzer = &args;
@@ -350,7 +350,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (NSError *)executeUpdateQuery:(NSString *)query arguments:(NSArray *)arguments
 {
-    checkForOpenDatabaseFatal(YES);
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
 
     __block BOOL success = NO;
     __block NSError *error = nil;
@@ -827,7 +827,8 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 - (FCModelSaveResult)save
 {
-    checkForOpenDatabaseFatal(YES);
+    if (! checkForOpenDatabaseFatal(NO)) return FCModelSaveFailed;
+
     if (deleted) [[NSException exceptionWithName:@"FCAttemptToSaveAfterDelete" reason:@"Cannot save deleted instance" userInfo:nil] raise];
 
     NSThread *sourceThread = NSThread.currentThread;
@@ -958,7 +959,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 - (FCModelSaveResult)delete
 {
-    checkForOpenDatabaseFatal(YES);
+    if (! checkForOpenDatabaseFatal(NO)) return FCModelSaveFailed;
 
     NSThread *sourceThread = NSThread.currentThread;
     __block FCModelSaveResult result;
@@ -1014,7 +1015,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)saveAll
 {
-    checkForOpenDatabaseFatal(YES);
+    if (! checkForOpenDatabaseFatal(NO)) return;
     NSArray *classesToNotify = (self == FCModel.class ? g_primaryKeyFieldName.allKeys : @[ self ]);
     for (Class class in classesToNotify) {
         [NSNotificationCenter.defaultCenter postNotificationName:FCModelSaveNotification object:class userInfo:nil];
@@ -1027,9 +1028,17 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (NSString *)expandQuery:(NSString *)query
 {
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+
     if (self == FCModel.class) return query;
-    query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
-    return [query stringByReplacingOccurrencesOfString:@"$T" withString:NSStringFromClass(self)];
+    @try {
+        query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
+        query = [query stringByReplacingOccurrencesOfString:@"$T" withString:NSStringFromClass(self)];
+    }
+    @catch (NSException *exception) {
+        query = nil;
+    }
+    return query;
 }
 
 - (NSString *)description
@@ -1242,7 +1251,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)inDatabaseSync:(void (^)(FMDatabase *db))block
 {
-    checkForOpenDatabaseFatal(YES);
+    if (! checkForOpenDatabaseFatal(NO)) return;
     [g_databaseQueue inDatabase:block];
 }
 
