@@ -596,7 +596,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)queryFailedInDatabase:(FMDatabase *)db
 {
-    [[NSException exceptionWithName:@"FCModelSQLiteException" reason:db.lastErrorMessage userInfo:nil] raise];
+    NSLog(@"Query Failed in Database - %@", db.lastErrorMessage);
 }
 
 #pragma mark - Attributes and CRUD
