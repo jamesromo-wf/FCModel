@@ -330,7 +330,12 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (NSError *)executeUpdateQuery:(NSString *)query, ...
 {
-    if (! checkForOpenDatabaseFatal(NO)) return nil;
+    if (! checkForOpenDatabaseFatal(NO)) {
+        NSDictionary *details = @{ NSLocalizedDescriptionKey: @"Database is closed" };
+        return [NSError errorWithDomain:@"FCModel"
+                                   code:NSURLErrorCannotOpenFile
+                               userInfo:details];
+    }
 
     va_list args;
     va_list *foolTheStaticAnalyzer = &args;
@@ -350,7 +355,12 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (NSError *)executeUpdateQuery:(NSString *)query arguments:(NSArray *)arguments
 {
-    if (! checkForOpenDatabaseFatal(NO)) return nil;
+    if (! checkForOpenDatabaseFatal(NO)) {
+        NSDictionary *details = @{ NSLocalizedDescriptionKey: @"Database is closed" };
+        return [NSError errorWithDomain:@"FCModel"
+                                   code:NSURLErrorCannotOpenFile
+                               userInfo:details];
+    }
 
     __block BOOL success = NO;
     __block NSError *error = nil;
