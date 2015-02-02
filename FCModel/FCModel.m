@@ -596,7 +596,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)queryFailedInDatabase:(FMDatabase *)db
 {
-    NSLog(@"Query Failed in Database - %@", db.lastErrorMessage);
+    NSLog(@"[FCModel] query failed in database with error %@", db.lastErrorMessage);
 }
 
 #pragma mark - Attributes and CRUD
@@ -829,7 +829,10 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 {
     if (! checkForOpenDatabaseFatal(NO)) return FCModelSaveFailed;
 
-    if (deleted) [[NSException exceptionWithName:@"FCAttemptToSaveAfterDelete" reason:@"Cannot save deleted instance" userInfo:nil] raise];
+    if (deleted) {
+        NSLog(@"[FCModel] attempt to save after delete. Cannot save deleted instance.");
+        return FCModelSaveFailed;
+    }
 
     NSThread *sourceThread = NSThread.currentThread;
     __block FCModelSaveResult result;
