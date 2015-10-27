@@ -330,7 +330,12 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (NSError *)executeUpdateQuery:(NSString *)query, ...
 {
-    checkForOpenDatabaseFatal(YES);
+    if (! checkForOpenDatabaseFatal(NO)) {
+        NSDictionary *details = @{ NSLocalizedDescriptionKey: @"Database is closed" };
+        return [NSError errorWithDomain:@"FCModel"
+                                   code:NSURLErrorCannotOpenFile
+                               userInfo:details];
+    }
 
     va_list args;
     va_list *foolTheStaticAnalyzer = &args;
@@ -350,7 +355,12 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (NSError *)executeUpdateQuery:(NSString *)query arguments:(NSArray *)arguments
 {
-    checkForOpenDatabaseFatal(YES);
+    if (! checkForOpenDatabaseFatal(NO)) {
+        NSDictionary *details = @{ NSLocalizedDescriptionKey: @"Database is closed" };
+        return [NSError errorWithDomain:@"FCModel"
+                                   code:NSURLErrorCannotOpenFile
+                               userInfo:details];
+    }
 
     __block BOOL success = NO;
     __block NSError *error = nil;
@@ -596,7 +606,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)queryFailedInDatabase:(FMDatabase *)db
 {
-    [[NSException exceptionWithName:@"FCModelSQLiteException" reason:db.lastErrorMessage userInfo:nil] raise];
+    NSLog(@"[FCModel] query failed in database with error %@", db.lastErrorMessage);
 }
 
 #pragma mark - Attributes and CRUD
@@ -827,15 +837,23 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 - (FCModelSaveResult)save
 {
-    checkForOpenDatabaseFatal(YES);
-    if (deleted) [[NSException exceptionWithName:@"FCAttemptToSaveAfterDelete" reason:@"Cannot save deleted instance" userInfo:nil] raise];
+    if (! checkForOpenDatabaseFatal(NO)) return FCModelSaveFailed;
+
+    if (deleted) {
+        NSLog(@"[FCModel] attempt to save after delete. Cannot save deleted instance.");
+        return FCModelSaveFailed;
+    }
 
     NSThread *sourceThread = NSThread.currentThread;
     __block FCModelSaveResult result;
     __block BOOL update;
     __block NSSet *changedFields = nil;
     [g_databaseQueue inDatabase:^(FMDatabase *db) {
-    
+        if (! checkForOpenDatabaseFatal(NO)) {
+            result = FCModelSaveFailed;
+            return;
+        }
+
         NSDictionary *changes = self.unsavedChanges;
         BOOL dirty = changes.count;
         if (! dirty && existsInDatabase) { result = FCModelSaveNoChanges; return; }
@@ -958,7 +976,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 - (FCModelSaveResult)delete
 {
-    checkForOpenDatabaseFatal(YES);
+    if (! checkForOpenDatabaseFatal(NO)) return FCModelSaveFailed;
 
     NSThread *sourceThread = NSThread.currentThread;
     __block FCModelSaveResult result;
@@ -1014,7 +1032,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)saveAll
 {
-    checkForOpenDatabaseFatal(YES);
+    if (! checkForOpenDatabaseFatal(NO)) return;
     NSArray *classesToNotify = (self == FCModel.class ? g_primaryKeyFieldName.allKeys : @[ self ]);
     for (Class class in classesToNotify) {
         [NSNotificationCenter.defaultCenter postNotificationName:FCModelSaveNotification object:class userInfo:nil];
@@ -1027,9 +1045,17 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (NSString *)expandQuery:(NSString *)query
 {
+    if (! checkForOpenDatabaseFatal(NO)) return nil;
+
     if (self == FCModel.class) return query;
-    query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
-    return [query stringByReplacingOccurrencesOfString:@"$T" withString:NSStringFromClass(self)];
+    @try {
+        query = [query stringByReplacingOccurrencesOfString:@"$PK" withString:g_primaryKeyFieldName[self]];
+        query = [query stringByReplacingOccurrencesOfString:@"$T" withString:NSStringFromClass(self)];
+    }
+    @catch (NSException *exception) {
+        query = nil;
+    }
+    return query;
 }
 
 - (NSString *)description
@@ -1242,7 +1268,7 @@ static inline BOOL checkForOpenDatabaseFatal(BOOL fatal)
 
 + (void)inDatabaseSync:(void (^)(FMDatabase *db))block
 {
-    checkForOpenDatabaseFatal(YES);
+    if (! checkForOpenDatabaseFatal(NO)) return;
     [g_databaseQueue inDatabase:block];
 }
 
