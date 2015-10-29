@@ -10,6 +10,7 @@
 #import "FCModel.h"
 #import "SimpleModel.h"
 #import "SimplerModel.h"
+#import "SerializeModel.h"
 
 @interface FCModelTest_Tests : XCTestCase
 
@@ -47,7 +48,7 @@
 {
     SimpleModel *entity1 = [SimpleModel instanceWithPrimaryKey:@"a"];
     [entity1 save];
-    
+
     SimpleModel *entity2 = [SimpleModel instanceWithPrimaryKey:@"a"];
     XCTAssertTrue(entity2 == entity1);
 }
@@ -78,15 +79,14 @@
 
     // the @autoreleasepool does not get cleared immediately
     [NSThread sleepForTimeInterval:1.0f];
-    
+
     XCTAssertTrue([FCModel closeDatabase]);
     XCTAssertTrue(! [FCModel databaseIsOpen]);
     XCTAssertTrue([SimpleModel instanceWithPrimaryKey:@"a"] == nil);
-    XCTAssertThrows([SimpleModel executeUpdateQuery:@"UPDATE $T SET name = 'bogus'"]);
 
     [self openDatabase];
     XCTAssertTrue([FCModel databaseIsOpen]);
-    
+
     SimpleModel *entity2 = [SimpleModel instanceWithPrimaryKey:@"a"];
     XCTAssertTrue(entity2.existsInDatabase);
     XCTAssertTrue(entity2 != (__bridge SimpleModel *)(e1ptr));
@@ -101,7 +101,7 @@
     XCTAssertEqual(saveResult1, FCModelSaveSucceeded);
     FCModelSaveResult saveResult2 = [entity1 save];
     XCTAssertEqual(saveResult2, FCModelSaveNoChanges, @"Repeated saves should yield no changes");
-    
+
     // actually changing the date should cause changes during save
     entity1.date = [NSDate dateWithTimeIntervalSinceNow:1];
     FCModelSaveResult saveResult3 = [entity1 save];
@@ -116,7 +116,7 @@
     FCModelFieldInfo *info3 = [[entity class] infoForFieldName:@"lowercase"];
     FCModelFieldInfo *info4 = [[entity class] infoForFieldName:@"mixedcase"];
     FCModelFieldInfo *info5 = [[entity class] infoForFieldName:@"typelessTest"];
-    
+
     XCTAssertEqual(info1.type, FCModelFieldTypeText);
     XCTAssertEqual(info2.type, FCModelFieldTypeText);
     XCTAssertEqual(info3.type, FCModelFieldTypeText);
@@ -129,14 +129,14 @@
     FCModelFieldInfo *fieldInfoUnspecified = [SimpleModel infoForFieldName:@"textDefaultUnspecified"];
     FCModelFieldInfo *fieldInfoNullLiteral = [SimpleModel infoForFieldName:@"textDefaultNullLiteral"];
     FCModelFieldInfo *fieldInfoNullString = [SimpleModel infoForFieldName:@"textDefaultNullString"];
-    
+
     XCTAssertTrue(fieldInfoUnspecified.nullAllowed);
     XCTAssertTrue(fieldInfoNullLiteral.nullAllowed);
     XCTAssertTrue(fieldInfoNullString.nullAllowed);
     XCTAssertTrue(fieldInfoUnspecified.defaultValue == nil);
     XCTAssertTrue(fieldInfoNullLiteral.defaultValue == nil);
     XCTAssertTrue([fieldInfoNullString.defaultValue isEqualToString:@"NULL"]);
-    
+
     SimpleModel *entity = [SimpleModel new];
     XCTAssertTrue(entity.textDefaultUnspecified == nil);
     XCTAssertTrue(entity.textDefaultNullLiteral == nil);
@@ -148,7 +148,7 @@
     FCModelFieldInfo *infoDefaultUnspecified = [SimpleModel infoForFieldName:@"nullableNumberDefaultUnspecified"];
     FCModelFieldInfo *infoDefaultNull = [SimpleModel infoForFieldName:@"nullableNumberDefaultNull"];
     FCModelFieldInfo *infoDefault1 = [SimpleModel infoForFieldName:@"nullableNumberDefault1"];
-    
+
     XCTAssertTrue(infoDefaultUnspecified.nullAllowed);
     XCTAssertTrue(infoDefaultNull.nullAllowed);
     XCTAssertTrue(infoDefault1.nullAllowed);
@@ -156,7 +156,7 @@
     XCTAssertTrue(infoDefaultUnspecified.defaultValue == nil);
     XCTAssertTrue(infoDefaultNull.defaultValue == nil);
     XCTAssertTrue([infoDefault1.defaultValue isEqual:@1]);
-    
+
     SimpleModel *entity = [SimpleModel new];
     XCTAssertTrue(entity.nullableNumberDefaultUnspecified == nil);
     XCTAssertTrue(entity.nullableNumberDefaultNull == nil);
@@ -168,22 +168,22 @@
     SimpleModel *entity1 = [SimpleModel instanceWithPrimaryKey:@"w"];
     entity1.name = @"Waudru";
     [entity1 save];
-    
+
     id result = nil;
-    
+
     result = [SimpleModel keyedAllInstances];
     XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
-    
+
     [SimpleModel inDatabaseSync:^(FMDatabase *db) {
         FMResultSet *r = [db executeQuery:@"SELECT * FROM SimpleModel"];
         id result = [SimpleModel keyedInstancesFromResultSet:r];
         XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
         [r close];
     }];
-    
+
     result = [SimpleModel keyedInstancesWhere:@"name = 'Waudru'"];
     XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
-    
+
     result = [SimpleModel keyedInstancesWithPrimaryKeyValues:@[@"w"]];
     XCTAssertTrue(result && [result isKindOfClass:[NSDictionary class]]);
 }
@@ -193,44 +193,44 @@
     [FCModel inDatabaseSync:^(FMDatabase *db) {
         maxParameterCount = sqlite3_limit(db.sqliteHandle, SQLITE_LIMIT_VARIABLE_NUMBER, -1);
     }];
-    
+
     NSMutableArray *values = [NSMutableArray arrayWithCapacity:maxParameterCount+1];
     for (int i = 0; i <= maxParameterCount; i++) {
         [values addObject:@(i)];
     }
     XCTAssertNoThrow([SimpleModel instancesWithPrimaryKeyValues:values]);
-    
+
 }
 
 - (void)testNotifications
 {
     __block int insertNotificationsClass1 = 0, insertNotificationsClass2 = 0, insertNotificationsNoClass = 0,
-                updateNotificationsClass1 = 0, updateNotificationsClass2 = 0, updateNotificationsNoClass = 0,
-                deleteNotificationsClass1 = 0, deleteNotificationsClass2 = 0, deleteNotificationsNoClass = 0,
-                anyChgNotificationsClass1 = 0, anyChgNotificationsClass2 = 0, anyChgNotificationsNoClass = 0;
+    updateNotificationsClass1 = 0, updateNotificationsClass2 = 0, updateNotificationsNoClass = 0,
+    deleteNotificationsClass1 = 0, deleteNotificationsClass2 = 0, deleteNotificationsNoClass = 0,
+    anyChgNotificationsClass1 = 0, anyChgNotificationsClass2 = 0, anyChgNotificationsNoClass = 0;
 
     NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
     NSArray *observers = @[
-        [nc addObserverForName:FCModelInsertNotification    object:nil                queue:nil usingBlock:^(NSNotification *n) { insertNotificationsNoClass++; }],
-        [nc addObserverForName:FCModelInsertNotification    object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { insertNotificationsClass1++;  }],
-        [nc addObserverForName:FCModelInsertNotification    object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { insertNotificationsClass2++;  }],
-        [nc addObserverForName:FCModelUpdateNotification    object:nil                queue:nil usingBlock:^(NSNotification *n) { updateNotificationsNoClass++; }],
-        [nc addObserverForName:FCModelUpdateNotification    object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { updateNotificationsClass1++;  }],
-        [nc addObserverForName:FCModelUpdateNotification    object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { updateNotificationsClass2++;  }],
-        [nc addObserverForName:FCModelDeleteNotification    object:nil                queue:nil usingBlock:^(NSNotification *n) { deleteNotificationsNoClass++; }],
-        [nc addObserverForName:FCModelDeleteNotification    object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { deleteNotificationsClass1++;  }],
-        [nc addObserverForName:FCModelDeleteNotification    object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { deleteNotificationsClass2++;  }],
-        [nc addObserverForName:FCModelAnyChangeNotification object:nil                queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsNoClass++; }],
-        [nc addObserverForName:FCModelAnyChangeNotification object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsClass1++;  }],
-        [nc addObserverForName:FCModelAnyChangeNotification object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsClass2++;  }],
-    ];
+                           [nc addObserverForName:FCModelInsertNotification    object:nil                queue:nil usingBlock:^(NSNotification *n) { insertNotificationsNoClass++; }],
+                           [nc addObserverForName:FCModelInsertNotification    object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { insertNotificationsClass1++;  }],
+                           [nc addObserverForName:FCModelInsertNotification    object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { insertNotificationsClass2++;  }],
+                           [nc addObserverForName:FCModelUpdateNotification    object:nil                queue:nil usingBlock:^(NSNotification *n) { updateNotificationsNoClass++; }],
+                           [nc addObserverForName:FCModelUpdateNotification    object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { updateNotificationsClass1++;  }],
+                           [nc addObserverForName:FCModelUpdateNotification    object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { updateNotificationsClass2++;  }],
+                           [nc addObserverForName:FCModelDeleteNotification    object:nil                queue:nil usingBlock:^(NSNotification *n) { deleteNotificationsNoClass++; }],
+                           [nc addObserverForName:FCModelDeleteNotification    object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { deleteNotificationsClass1++;  }],
+                           [nc addObserverForName:FCModelDeleteNotification    object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { deleteNotificationsClass2++;  }],
+                           [nc addObserverForName:FCModelAnyChangeNotification object:nil                queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsNoClass++; }],
+                           [nc addObserverForName:FCModelAnyChangeNotification object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsClass1++;  }],
+                           [nc addObserverForName:FCModelAnyChangeNotification object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsClass2++;  }],
+                           ];
 
     SimpleModel *insertModel = [SimpleModel new];
     insertModel.name = @"insert";
     [insertModel save];
-    
+
     XCTAssertFalse([FCModel isBatchingNotificationsForCurrentThread]);
-    
+
     XCTAssert(insertNotificationsNoClass == 1, @"[1] Received %d insert classless notifications",    insertNotificationsNoClass);
     XCTAssert(insertNotificationsClass1  == 1, @"[1] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
     XCTAssert(insertNotificationsClass2  == 0, @"[1] Received %d insert SimplerModel notifications", insertNotificationsClass2);
@@ -306,32 +306,32 @@
     XCTAssert(anyChgNotificationsNoClass == 5, @"[5] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
     XCTAssert(anyChgNotificationsClass1  == 2, @"[5] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
     XCTAssert(anyChgNotificationsClass2  == 3, @"[5] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
-    
+
     for (id observer in observers) [nc removeObserver:observer];
 }
 
 - (void)testBatchNotifications
 {
     __block int insertNotificationsClass1 = 0, insertNotificationsClass2 = 0, insertNotificationsNoClass = 0,
-                updateNotificationsClass1 = 0, updateNotificationsClass2 = 0, updateNotificationsNoClass = 0,
-                deleteNotificationsClass1 = 0, deleteNotificationsClass2 = 0, deleteNotificationsNoClass = 0,
-                anyChgNotificationsClass1 = 0, anyChgNotificationsClass2 = 0, anyChgNotificationsNoClass = 0;
+    updateNotificationsClass1 = 0, updateNotificationsClass2 = 0, updateNotificationsNoClass = 0,
+    deleteNotificationsClass1 = 0, deleteNotificationsClass2 = 0, deleteNotificationsNoClass = 0,
+    anyChgNotificationsClass1 = 0, anyChgNotificationsClass2 = 0, anyChgNotificationsNoClass = 0;
 
     NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
     NSArray *observers = @[
-        [nc addObserverForName:FCModelInsertNotification    object:nil                queue:nil usingBlock:^(NSNotification *n) { insertNotificationsNoClass++; }],
-        [nc addObserverForName:FCModelInsertNotification    object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { insertNotificationsClass1++;  }],
-        [nc addObserverForName:FCModelInsertNotification    object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { insertNotificationsClass2++;  }],
-        [nc addObserverForName:FCModelUpdateNotification    object:nil                queue:nil usingBlock:^(NSNotification *n) { updateNotificationsNoClass++; }],
-        [nc addObserverForName:FCModelUpdateNotification    object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { updateNotificationsClass1++;  }],
-        [nc addObserverForName:FCModelUpdateNotification    object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { updateNotificationsClass2++;  }],
-        [nc addObserverForName:FCModelDeleteNotification    object:nil                queue:nil usingBlock:^(NSNotification *n) { deleteNotificationsNoClass++; }],
-        [nc addObserverForName:FCModelDeleteNotification    object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { deleteNotificationsClass1++;  }],
-        [nc addObserverForName:FCModelDeleteNotification    object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { deleteNotificationsClass2++;  }],
-        [nc addObserverForName:FCModelAnyChangeNotification object:nil                queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsNoClass++; }],
-        [nc addObserverForName:FCModelAnyChangeNotification object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsClass1++;  }],
-        [nc addObserverForName:FCModelAnyChangeNotification object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsClass2++;  }],
-    ];
+                           [nc addObserverForName:FCModelInsertNotification    object:nil                queue:nil usingBlock:^(NSNotification *n) { insertNotificationsNoClass++; }],
+                           [nc addObserverForName:FCModelInsertNotification    object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { insertNotificationsClass1++;  }],
+                           [nc addObserverForName:FCModelInsertNotification    object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { insertNotificationsClass2++;  }],
+                           [nc addObserverForName:FCModelUpdateNotification    object:nil                queue:nil usingBlock:^(NSNotification *n) { updateNotificationsNoClass++; }],
+                           [nc addObserverForName:FCModelUpdateNotification    object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { updateNotificationsClass1++;  }],
+                           [nc addObserverForName:FCModelUpdateNotification    object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { updateNotificationsClass2++;  }],
+                           [nc addObserverForName:FCModelDeleteNotification    object:nil                queue:nil usingBlock:^(NSNotification *n) { deleteNotificationsNoClass++; }],
+                           [nc addObserverForName:FCModelDeleteNotification    object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { deleteNotificationsClass1++;  }],
+                           [nc addObserverForName:FCModelDeleteNotification    object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { deleteNotificationsClass2++;  }],
+                           [nc addObserverForName:FCModelAnyChangeNotification object:nil                queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsNoClass++; }],
+                           [nc addObserverForName:FCModelAnyChangeNotification object:SimpleModel.class  queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsClass1++;  }],
+                           [nc addObserverForName:FCModelAnyChangeNotification object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) { anyChgNotificationsClass2++;  }],
+                           ];
 
     XCTAssertFalse([FCModel isBatchingNotificationsForCurrentThread]);
     [FCModel performWithBatchedNotifications:^{
@@ -340,7 +340,7 @@
         SimpleModel *insertModel = [SimpleModel new];
         insertModel.name = @"insert";
         [insertModel save];
-        
+
         XCTAssert(insertNotificationsNoClass == 0, @"[1] Received %d insert classless notifications",    insertNotificationsNoClass);
         XCTAssert(insertNotificationsClass1  == 0, @"[1] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
         XCTAssert(insertNotificationsClass2  == 0, @"[1] Received %d insert SimplerModel notifications", insertNotificationsClass2);
@@ -419,7 +419,7 @@
     } deliverOnCompletion:YES];
 
     XCTAssertFalse([FCModel isBatchingNotificationsForCurrentThread]);
-    
+
     XCTAssert(insertNotificationsNoClass == 2, @"[6] Received %d insert classless notifications",    insertNotificationsNoClass);
     XCTAssert(insertNotificationsClass1  == 1, @"[6] Received %d insert SimpleModel notifications",  insertNotificationsClass1);
     XCTAssert(insertNotificationsClass2  == 1, @"[6] Received %d insert SimplerModel notifications", insertNotificationsClass2);
@@ -432,7 +432,7 @@
     XCTAssert(anyChgNotificationsNoClass == 2, @"[6] Received %d anyChg classless notifications",    anyChgNotificationsNoClass);
     XCTAssert(anyChgNotificationsClass1  == 1, @"[6] Received %d anyChg SimpleModel notifications",  anyChgNotificationsClass1);
     XCTAssert(anyChgNotificationsClass2  == 1, @"[6] Received %d anyChg SimplerModel notifications", anyChgNotificationsClass2);
-    
+
     for (id observer in observers) [nc removeObserver:observer];
 }
 
@@ -443,16 +443,16 @@
 
     NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
     NSArray *observers = @[
-        [nc addObserverForName:FCModelAnyChangeNotification object:SimpleModel.class queue:nil usingBlock:^(NSNotification *n) {
-            changedFieldsClass1 = n.userInfo[FCModelChangedFieldsKey];
-        }],
-        [nc addObserverForName:FCModelAnyChangeNotification object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) {
-            changedFieldsClass2 = n.userInfo[FCModelChangedFieldsKey];
-        }],
-    ];
+                           [nc addObserverForName:FCModelAnyChangeNotification object:SimpleModel.class queue:nil usingBlock:^(NSNotification *n) {
+                               changedFieldsClass1 = n.userInfo[FCModelChangedFieldsKey];
+                           }],
+                           [nc addObserverForName:FCModelAnyChangeNotification object:SimplerModel.class queue:nil usingBlock:^(NSNotification *n) {
+                               changedFieldsClass2 = n.userInfo[FCModelChangedFieldsKey];
+                           }],
+                           ];
 
     XCTAssertFalse([FCModel isBatchingNotificationsForCurrentThread]);
-    
+
     NSSet *allClass1Fields = [NSSet setWithArray:SimpleModel.databaseFieldNames];
     NSSet *allClass2Fields = [NSSet setWithArray:SimplerModel.databaseFieldNames];
 
@@ -470,9 +470,9 @@
     insertModel2.title = @"insert2";
     [insertModel2 save];
     XCTAssert([changedFieldsClass2 isEqualToSet:allClass2Fields], @"Insert2 reported wrong field names: %@", changedFieldsClass2);
-    
+
     // Batching
-    
+
     changedFieldsClass1 = nil;
     [FCModel performWithBatchedNotifications:^{
         insertModel.name = @"batchedUpdate";
@@ -482,12 +482,12 @@
 
         insertModel.mixedcase = 2;
         [insertModel save];
-        XCTAssert(changedFieldsClass1 == nil, @"Batched update2 reported wrong field names: %@", changedFieldsClass1);        
+        XCTAssert(changedFieldsClass1 == nil, @"Batched update2 reported wrong field names: %@", changedFieldsClass1);
     } deliverOnCompletion:YES];
-    
+
     NSSet *changedFields = [NSSet setWithObjects:@"name", @"lowercase", @"mixedcase", nil];
     XCTAssert([changedFieldsClass1 isEqualToSet:changedFields], @"Batch reported wrong field names: %@", changedFieldsClass1);
-    
+
     for (id observer in observers) [nc removeObserver:observer];
 }
 
@@ -503,6 +503,17 @@
     [NSNotificationCenter.defaultCenter removeObserver:observer];
 }
 
+- (void)testSerializingInvalidObjects
+{
+    NSArray *invalidArray = @[[NSNull null]];
+    NSDictionary *invalidDictionary = @{@"test":[NSNull null]};
+
+    SerializeModel *insertModel = [SerializeModel new];
+    insertModel.testArray = invalidArray;
+    insertModel.testDictionary = invalidDictionary;
+    [insertModel save];
+}
+
 
 #pragma mark - Helper methods
 
@@ -511,40 +522,48 @@
     [FCModel openDatabaseAtPath:[self dbPath] withSchemaBuilder:^(FMDatabase *db, int *schemaVersion) {
         [db setCrashOnErrors:YES];
         [db beginTransaction];
-        
+
         void (^failedAt)(int statement) = ^(int statement){
             int lastErrorCode = db.lastErrorCode;
             NSString *lastErrorMessage = db.lastErrorMessage;
             [db rollback];
             NSAssert3(0, @"Migration statement %d failed, code %d: %@", statement, lastErrorCode, lastErrorMessage);
         };
-        
+
         if (*schemaVersion < 1) {
             if (! [db executeUpdate:
-                @"CREATE TABLE SimpleModel ("
-                @"    uniqueID     TEXT PRIMARY KEY,"
-                @"    name         TEXT,"
-                @"    date         DATETIME,"
-                @"    textDefaultUnspecified TEXT,"
-                @"    textDefaultNullLiteral TEXT DEFAULT NULL,"
-                @"    textDefaultNullString  TEXT DEFAULT 'NULL',"
-                @"    nullableNumberDefaultUnspecified INTEGER,"
-                @"    nullableNumberDefaultNull INTEGER DEFAULT NULL,"
-                @"    nullableNumberDefault1 INTEGER DEFAULT 1,"
-                @"    lowercase         text,"
-                @"    mixedcase         Integer NOT NULL,"
-                @"    typelessTest"
-                @");"
-            ]) failedAt(1);
-
+                   @"CREATE TABLE SimpleModel ("
+                   @"    uniqueID     TEXT PRIMARY KEY,"
+                   @"    name         TEXT,"
+                   @"    date         DATETIME,"
+                   @"    textDefaultUnspecified TEXT,"
+                   @"    textDefaultNullLiteral TEXT DEFAULT NULL,"
+                   @"    textDefaultNullString  TEXT DEFAULT 'NULL',"
+                   @"    nullableNumberDefaultUnspecified INTEGER,"
+                   @"    nullableNumberDefaultNull INTEGER DEFAULT NULL,"
+                   @"    nullableNumberDefault1 INTEGER DEFAULT 1,"
+                   @"    lowercase         text,"
+                   @"    mixedcase         Integer NOT NULL,"
+                   @"    typelessTest"
+                   @");"
+                   ]) failedAt(1);
+            
             if (! [db executeUpdate:
-                @"CREATE TABLE SimplerModel ("
-                @"    id    INTEGER PRIMARY KEY,"
-                @"    title TEXT"
-                @");"
-            ]) failedAt(2);
-
-
+                   @"CREATE TABLE SimplerModel ("
+                   @"    id    INTEGER PRIMARY KEY,"
+                   @"    title TEXT"
+                   @");"
+                   ]) failedAt(2);
+            
+            if (! [db executeUpdate:
+                   @"CREATE TABLE SerializeModel ("
+                   @"    id    INTEGER PRIMARY KEY,"
+                   @"    testDictionary TEXT"
+                   @"    testArray      TEXT"
+                   @");"
+                   ]) failedAt(2);
+            
+            
             *schemaVersion = 1;
         }
         [db commit];
