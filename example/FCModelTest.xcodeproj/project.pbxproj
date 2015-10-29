@@ -39,6 +39,7 @@
 		A9EEFB2517E5F5060066C5EA /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = A9EEFB2417E5F5060066C5EA /* Default-568h@2x.png */; };
 		A9EEFB2817E6AF970066C5EA /* Color.m in Sources */ = {isa = PBXBuildFile; fileRef = A9EEFB2717E6AF970066C5EA /* Color.m */; };
 		A9EEFB2C17E6BCF80066C5EA /* FMDatabasePool.m in Sources */ = {isa = PBXBuildFile; fileRef = A9EEFB2B17E6BCF80066C5EA /* FMDatabasePool.m */; };
+		D57333E11BE2794B0029E31E /* SerializeModel.m in Sources */ = {isa = PBXBuildFile; fileRef = D57333E01BE2794B0029E31E /* SerializeModel.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +104,8 @@
 		A9EEFB2717E6AF970066C5EA /* Color.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Color.m; sourceTree = "<group>"; };
 		A9EEFB2A17E6BCF80066C5EA /* FMDatabasePool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FMDatabasePool.h; sourceTree = "<group>"; };
 		A9EEFB2B17E6BCF80066C5EA /* FMDatabasePool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FMDatabasePool.m; sourceTree = "<group>"; };
+		D57333DF1BE2794B0029E31E /* SerializeModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SerializeModel.h; sourceTree = "<group>"; };
+		D57333E01BE2794B0029E31E /* SerializeModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SerializeModel.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,6 +139,8 @@
 			isa = PBXGroup;
 			children = (
 				9230D70417F32EF1000C9C87 /* FCModelTest_Tests.m */,
+				D57333DF1BE2794B0029E31E /* SerializeModel.h */,
+				D57333E01BE2794B0029E31E /* SerializeModel.m */,
 				9230D70C17F332F4000C9C87 /* SimpleModel.h */,
 				9230D70D17F332F5000C9C87 /* SimpleModel.m */,
 				A92A8E3D19189026000A9B46 /* SimplerModel.h */,
@@ -360,6 +365,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D57333E11BE2794B0029E31E /* SerializeModel.m in Sources */,
 				A92A8E3F19189026000A9B46 /* SimplerModel.m in Sources */,
 				9230D70517F32EF1000C9C87 /* FCModelTest_Tests.m in Sources */,
 				9230D70E17F332F5000C9C87 /* SimpleModel.m in Sources */,
